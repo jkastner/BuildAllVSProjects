@@ -1,32 +1,23 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
+﻿using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Caliburn.Micro;
 
 namespace BuildAllVSProjects.ViewModels
 {
     [Export(typeof(ReportViewModel))]
-    class ReportViewModel : Screen
+    internal class ReportViewModel : Screen
     {
-        private readonly List<String> _outputText = new List<string>();
-        private string _syasdag;
+        private readonly List<string> _outputText = new List<string>();
+
+        public string ReportText
+        {
+            get { return string.Join("\n", _outputText); }
+        }
 
         public void ReportOnCurLine(string info)
         {
             _outputText[0] = _outputText[0] + info;
             NotifyOfPropertyChange(() => ReportText);
-        }
-
-        public String ReportText
-        {
-            get
-            {
-                return String.Join("\n", _outputText);
-            }
         }
 
 

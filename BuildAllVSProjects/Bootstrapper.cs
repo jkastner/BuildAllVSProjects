@@ -5,8 +5,8 @@ using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using System.Reflection;
 using System.Windows;
-using Caliburn.Micro;
 using BuildAllVSProjects.ViewModels;
+using Caliburn.Micro;
 
 namespace BuildAllVSProjects
 {
@@ -23,7 +23,7 @@ namespace BuildAllVSProjects
         {
             var assemblies = new HashSet<Assembly>();
 
-            assemblies.Add(typeof (ShellViewModel).Assembly);
+            assemblies.Add(typeof(ShellViewModel).Assembly);
             return assemblies;
         }
 

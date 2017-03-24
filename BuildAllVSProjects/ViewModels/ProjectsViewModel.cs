@@ -5,8 +5,6 @@ using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reactive.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using BuildAllVSProjects.Models;
@@ -14,12 +12,17 @@ using Caliburn.Micro;
 
 namespace BuildAllVSProjects.ViewModels
 {
-    [Export(typeof (ProjectsViewModel))]
+    [Export(typeof(ProjectsViewModel))]
     internal class ProjectsViewModel : Screen
     {
         private readonly BuildService _buildService;
+
+        private readonly Dictionary<string, SolutionFile> _solutionFileCache = new Dictionary<string, SolutionFile>();
         private bool _buildRunning;
+
+        private CancelObject _cancelObject;
         private string _extensionTypes = ".sln";
+        private bool _isCanceling;
         private string _targetDirectory = @"C:\Users\SESA222691\Documents\SharedProjects";
         private string _vsLocation = @"C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\devenv.com";
 
@@ -32,7 +35,7 @@ namespace BuildAllVSProjects.ViewModels
         }
 
         public ReportViewModel Reporter { get; }
-        
+
         public bool CanStartBrowse
         {
             get { return !_buildRunning; }
@@ -47,16 +50,10 @@ namespace BuildAllVSProjects.ViewModels
         {
             get { return !_buildRunning && AllProjects.Any(); }
         }
+
         public bool CanCancelBuild
         {
             get { return _buildRunning && !_isCanceling; }
-        }
-
-        public async void CancelBuild()
-        {
-            _cancelObject.ShouldCancel = true;
-            _isCanceling = true;
-            NotifyOfPropertyChange(() => CanCancelBuild);
         }
 
 
@@ -97,13 +94,18 @@ namespace BuildAllVSProjects.ViewModels
             }
         }
 
+        public async void CancelBuild()
+        {
+            Reporter.Report("Canceling...");
+            _cancelObject.ShouldCancel = true;
+            _isCanceling = true;
+            NotifyOfPropertyChange(() => CanCancelBuild);
+        }
+
         public void RebuildAll()
         {
             StartBuild(true);
         }
-
-        CancelObject _cancelObject;
-        private bool _isCanceling;
 
         private async Task<bool> StartBuild(bool rebuild)
         {
@@ -112,7 +114,7 @@ namespace BuildAllVSProjects.ViewModels
             _buildRunning = true;
             NotifyCanBuild();
             _cancelObject = new CancelObject();
-            Task<bool> qq = _buildService.Build(rebuild, VSLocation, AllProjects, _cancelObject);
+            var qq = _buildService.Build(rebuild, VSLocation, AllProjects, _cancelObject);
             await qq;
             _buildRunning = false;
             NotifyCanBuild();
@@ -125,8 +127,6 @@ namespace BuildAllVSProjects.ViewModels
             NotifyOfPropertyChange(() => CanRebuildAll);
             NotifyOfPropertyChange(() => CanBuildAll);
             NotifyOfPropertyChange(() => CanCancelBuild);
-            
-
         }
 
         public async void StartBrowse()
@@ -140,9 +140,6 @@ namespace BuildAllVSProjects.ViewModels
             return await StartBuild(false);
         }
 
-        Dictionary<String, SolutionFile> _solutionFileCache = new Dictionary<string, SolutionFile>();
-        private string _reportText;
-
         public void PopulateFromDir()
         {
             AllProjects.Clear();
@@ -155,6 +152,7 @@ namespace BuildAllVSProjects.ViewModels
                 }
                 AllProjects.Add(_solutionFileCache[cur]);
             }
+            Reporter.Report(AllProjects.Count+" projects found in directory.");
         }
 
         public void OpenProject(SolutionFile toOpen)
@@ -176,40 +174,36 @@ namespace BuildAllVSProjects.ViewModels
 
         private IEnumerable<string> GetAllFilesByExentions(string target)
         {
-            List<String> ret = new List<string>();
+            var ret = new List<string>();
             GetAllExtensionFilesHelper(target, ret);
             return ret;
-
-
         }
 
         private void GetAllExtensionFilesHelper(string target, List<string> ret)
         {
-
             if (!Directory.Exists(target))
             {
-                Reporter.Report("Directory "+target+" does not exist.");
+                Reporter.Report("Directory " + target + " does not exist.");
                 return;
             }
             foreach (
-                var curExt in ExtensionTypes.Split(',').Select(x => x.Trim().Trim()).Where(x => !String.IsNullOrWhiteSpace(x)))
-                
+                var curExt in
+                    ExtensionTypes.Split(',').Select(x => x.Trim().Trim()).Where(x => !string.IsNullOrWhiteSpace(x)))
+
             {
                 var allCurFiles = Directory.GetFiles(target).Where(x => Path.GetExtension(x).ToLower().Equals(curExt));
                 ret.AddRange(allCurFiles);
             }
-            
-            
+
+
             foreach (var cur in Directory.GetDirectories(target))
             {
                 try
                 {
                     GetAllExtensionFilesHelper(cur, ret);
-
                 }
                 catch (Exception e)
                 {
-                    
                 }
             }
         }
