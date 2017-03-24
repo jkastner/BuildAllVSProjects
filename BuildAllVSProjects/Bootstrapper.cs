@@ -5,6 +5,7 @@ using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using System.Reflection;
 using System.Windows;
+using BuildAllVSProjects.Properties;
 using BuildAllVSProjects.ViewModels;
 using Caliburn.Micro;
 
@@ -78,6 +79,20 @@ namespace BuildAllVSProjects
 
         protected override void OnStartup(object sender, StartupEventArgs e)
         {
+            double width = Settings.Default.ScreenWidth;  //Previous window width 
+            double height = Settings.Default.ScreenHeight; //Previous window height
+
+            double screen_width = System.Windows.SystemParameters.PrimaryScreenWidth;
+            double screen_height = System.Windows.SystemParameters.PrimaryScreenHeight;
+
+            if (width > screen_width) width = (screen_width - 10);
+            if (height > screen_height) height = (screen_height - 10);
+
+            Dictionary<string, object> window_settings = new Dictionary<string, object>();
+
+            window_settings.Add("Width", width);
+            window_settings.Add("Height", height);
+
             DisplayRootViewFor<ShellViewModel>();
         }
     }

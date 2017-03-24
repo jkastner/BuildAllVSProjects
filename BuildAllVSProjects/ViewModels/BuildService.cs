@@ -120,7 +120,7 @@ namespace BuildAllVSProjects.ViewModels
                             }
                         });
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
                         cur.BuildStatus = BuildSuccessStatus.Exception;
                         errorCount++;

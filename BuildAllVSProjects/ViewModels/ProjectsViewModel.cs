@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel.Composition;
+using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -9,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using BuildAllVSProjects.Models;
 using Caliburn.Micro;
+
 
 namespace BuildAllVSProjects.ViewModels
 {
@@ -23,15 +25,46 @@ namespace BuildAllVSProjects.ViewModels
         private CancelObject _cancelObject;
         private string _extensionTypes = ".sln";
         private bool _isCanceling;
-        private string _targetDirectory = @"C:\Users\SESA222691\Documents\SharedProjects";
-        private string _vsLocation = @"C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\devenv.com";
+        private const string VsLocKey = "VSLocKey";
+        private const string TargetDirectoryKey = "TargetDirectoryKey ";
+        private readonly Configuration _configuration;
+        private const string DefaultVsLocation = @"C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\devenv.com";
 
         [ImportingConstructor]
         public ProjectsViewModel(BuildService buildService, ReportViewModel reporter)
         {
             _buildService = buildService;
+            _configuration = ConfigurationManager.OpenExeConfiguration(System.Reflection.Assembly.GetExecutingAssembly().Location);
             Reporter = reporter;
             AllProjects = new ObservableCollection<SolutionFile>();
+            LoadDefaults();
+        }
+        private string _vsLocation;
+        private string _targetDirectory;
+        private void LoadDefaults()
+        {
+            string vsLoc = ConfigurationManager.AppSettings[VsLocKey];
+            string targetDir = ConfigurationManager.AppSettings[TargetDirectoryKey];
+            
+            if (String.IsNullOrWhiteSpace(vsLoc))
+            {
+                vsLoc = DefaultVsLocation;
+            }
+            if (String.IsNullOrWhiteSpace(targetDir))
+            {
+                string myName = System.Security.Principal.WindowsIdentity.GetCurrent().Name;
+                targetDir = "C:\\Users\\" + myName + "\\Documents";
+            }
+            VSLocation = vsLoc;
+            TargetDirectory = targetDir;
+        }
+
+        private void SetConfigSetting(string key, string value)
+        {
+            _configuration.AppSettings.Settings.Remove(key);
+            _configuration.AppSettings.Settings.Add(key, value);
+            _configuration.Save(ConfigurationSaveMode.Modified);
+            ConfigurationManager.RefreshSection("appSettings");
         }
 
         public ReportViewModel Reporter { get; }
@@ -68,6 +101,11 @@ namespace BuildAllVSProjects.ViewModels
             }
         }
 
+        ~ProjectsViewModel()
+        {
+            SetConfigSetting(VsLocKey, VSLocation);
+            SetConfigSetting(TargetDirectoryKey, TargetDirectory);
+        }
 
         public ObservableCollection<SolutionFile> AllProjects { get; set; }
 
@@ -94,12 +132,12 @@ namespace BuildAllVSProjects.ViewModels
             }
         }
 
-        public async void CancelBuild()
+        public void CancelBuild()
         {
             Reporter.Report("Canceling...");
             _cancelObject.ShouldCancel = true;
             _isCanceling = true;
-            NotifyOfPropertyChange(() => CanCancelBuild);
+             NotifyOfPropertyChange(() => CanCancelBuild);
         }
 
         public void RebuildAll()
@@ -202,7 +240,7 @@ namespace BuildAllVSProjects.ViewModels
                 {
                     GetAllExtensionFilesHelper(cur, ret);
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                 }
             }
