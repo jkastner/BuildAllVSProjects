@@ -1,0 +1,24 @@
+<Application x:Class="BuildAllVSProjects.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:BuildAllVSProjects.Converters"
+             xmlns:caliburnMicroBasicApp="clr-namespace:BuildAllVSProjects">
+    
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary>
+                    <caliburnMicroBasicApp:Bootstrapper x:Key="bootstrapper" />
+                </ResourceDictionary>
+            </ResourceDictionary.MergedDictionaries>
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+            <Style x:Key="TextBox_Style" TargetType="TextBox">
+                <Setter Property="Margin" Value="5"></Setter>
+                <Setter Property="BorderThickness" Value="1"></Setter>
+                <Setter Property="BorderBrush" Value="Black"></Setter>
+
+            </Style>
+            <converters:BuildStatusToColorConverter x:Key="BuildStatusToColorConverter" />
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
