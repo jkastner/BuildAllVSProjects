@@ -11,6 +11,7 @@
         <DataTemplate x:Key="NewIndicatorTemplate">
             <Grid Width="20">
                 <Rectangle
+                    ToolTip="{Binding BuildStatus, Converter={StaticResource BuildStatusToDescriptionConverter}}"
                     Fill="{Binding BuildStatus, Converter={StaticResource BuildStatusToColorConverter}}"
                     cal:Message.Attach="[Event PreviewMouseLeftButtonUp] = [Action OpenProject($dataContext)]" />
             </Grid>

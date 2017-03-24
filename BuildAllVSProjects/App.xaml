@@ -18,6 +18,7 @@
                 <Setter Property="BorderBrush" Value="Black"></Setter>
 
             </Style>
+            <converters:BuildStatusToDescriptionConverter x:Key="BuildStatusToDescriptionConverter"/>
             <converters:BuildStatusToColorConverter x:Key="BuildStatusToColorConverter" />
         </ResourceDictionary>
     </Application.Resources>

@@ -84,6 +84,7 @@
     </ApplicationDefinition>
     <Compile Include="Bootstrapper.cs" />
     <Compile Include="Converters\BuildStatusToColorConverter.cs" />
+    <Compile Include="Converters\BuildStatusToDescriptionConverter.cs" />
     <Compile Include="Models\BuildSuccessStatus.cs" />
     <Compile Include="Models\SolutionFile.cs" />
     <Compile Include="Properties\Annotations.cs" />
