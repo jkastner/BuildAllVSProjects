@@ -1,4 +1,3 @@
-
 namespace BuildAllVSProjects.Models
 {
     public enum BuildSuccessStatus
@@ -11,6 +10,5 @@ namespace BuildAllVSProjects.Models
         FailedOnPrevious,
         SucceededOnPrevious,
         Exception
-
     }
 }

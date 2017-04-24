@@ -11,7 +11,7 @@ namespace BuildAllVSProjects.Converters
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
             var isBuildStatus = value as BuildSuccessStatus? ?? BuildSuccessStatus.Undefined;
-            if (isBuildStatus !=BuildSuccessStatus.Undefined)
+            if (isBuildStatus != BuildSuccessStatus.Undefined)
             {
                 switch (isBuildStatus)
                 {

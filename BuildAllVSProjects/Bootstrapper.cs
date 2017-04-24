@@ -64,7 +64,7 @@ namespace BuildAllVSProjects
                 return enumerable.First();
             }
 
-            throw new Exception(string.Format("Couldn't locate any instances of contract {0}.", contract));
+            throw new Exception($"Couldn't locate any instances of contract {contract}.");
         }
 
         protected override IEnumerable<object> GetAllInstances(Type serviceType)
@@ -79,19 +79,25 @@ namespace BuildAllVSProjects
 
         protected override void OnStartup(object sender, StartupEventArgs e)
         {
-            double width = Settings.Default.ScreenWidth;  //Previous window width 
-            double height = Settings.Default.ScreenHeight; //Previous window height
+            var width = Settings.Default.ScreenWidth; //Previous window width 
+            var height = Settings.Default.ScreenHeight; //Previous window height
 
-            double screen_width = System.Windows.SystemParameters.PrimaryScreenWidth;
-            double screen_height = System.Windows.SystemParameters.PrimaryScreenHeight;
+            var screenWidth = SystemParameters.PrimaryScreenWidth;
+            var screenHeight = SystemParameters.PrimaryScreenHeight;
 
-            if (width > screen_width) width = (screen_width - 10);
-            if (height > screen_height) height = (screen_height - 10);
+            if (width > screenWidth)
+            {
+                width = screenWidth - 10;
+            }
+            if (height > screenHeight)
+            {
+                height = screenHeight - 10;
+            }
 
-            Dictionary<string, object> window_settings = new Dictionary<string, object>();
+            var windowSettings = new Dictionary<string, object>();
 
-            window_settings.Add("Width", width);
-            window_settings.Add("Height", height);
+            windowSettings.Add("Width", width);
+            windowSettings.Add("Height", height);
 
             DisplayRootViewFor<ShellViewModel>();
         }

@@ -6,72 +6,53 @@ using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Security.Principal;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 using BuildAllVSProjects.Models;
 using Caliburn.Micro;
-
 
 namespace BuildAllVSProjects.ViewModels
 {
     [Export(typeof(ProjectsViewModel))]
     internal class ProjectsViewModel : Screen
     {
+        private const string VsLocKey = "VSLocKey";
+        private const string TargetDirectoryKey = "TargetDirectoryKey ";
+
+        private const string DefaultVsLocation =
+            @"C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\devenv.com";
+
         private readonly BuildService _buildService;
+        private readonly Configuration _configuration;
 
         private readonly Dictionary<string, SolutionFile> _solutionFileCache = new Dictionary<string, SolutionFile>();
+        private bool _browseRunning;
         private bool _buildRunning;
 
         private CancelObject _cancelObject;
         private string _extensionTypes = ".sln";
         private bool _isCanceling;
-        private const string VsLocKey = "VSLocKey";
-        private const string TargetDirectoryKey = "TargetDirectoryKey ";
-        private readonly Configuration _configuration;
-        private const string DefaultVsLocation = @"C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\devenv.com";
+        private string _targetDirectory;
+        private string _vsLocation;
 
         [ImportingConstructor]
         public ProjectsViewModel(BuildService buildService, ReportViewModel reporter)
         {
             _buildService = buildService;
-            _configuration = ConfigurationManager.OpenExeConfiguration(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            _configuration = ConfigurationManager.OpenExeConfiguration(Assembly.GetExecutingAssembly().Location);
             Reporter = reporter;
             AllProjects = new ObservableCollection<SolutionFile>();
             LoadDefaults();
-        }
-        private string _vsLocation;
-        private string _targetDirectory;
-        private void LoadDefaults()
-        {
-            string vsLoc = ConfigurationManager.AppSettings[VsLocKey];
-            string targetDir = ConfigurationManager.AppSettings[TargetDirectoryKey];
-            
-            if (String.IsNullOrWhiteSpace(vsLoc))
-            {
-                vsLoc = DefaultVsLocation;
-            }
-            if (String.IsNullOrWhiteSpace(targetDir))
-            {
-                string myName = System.Security.Principal.WindowsIdentity.GetCurrent().Name;
-                targetDir = "C:\\Users\\" + myName + "\\Documents";
-            }
-            VSLocation = vsLoc;
-            TargetDirectory = targetDir;
-        }
-
-        private void SetConfigSetting(string key, string value)
-        {
-            _configuration.AppSettings.Settings.Remove(key);
-            _configuration.AppSettings.Settings.Add(key, value);
-            _configuration.Save(ConfigurationSaveMode.Modified);
-            ConfigurationManager.RefreshSection("appSettings");
         }
 
         public ReportViewModel Reporter { get; }
 
         public bool CanStartBrowse
         {
-            get { return !_buildRunning; }
+            get { return !_buildRunning && !_browseRunning; }
         }
 
         public bool CanRebuildAll
@@ -101,13 +82,7 @@ namespace BuildAllVSProjects.ViewModels
             }
         }
 
-        ~ProjectsViewModel()
-        {
-            SetConfigSetting(VsLocKey, VSLocation);
-            SetConfigSetting(TargetDirectoryKey, TargetDirectory);
-        }
-
-        public ObservableCollection<SolutionFile> AllProjects { get; set; }
+        public ObservableCollection<SolutionFile> AllProjects { get; }
 
         public string TargetDirectory
         {
@@ -132,17 +107,49 @@ namespace BuildAllVSProjects.ViewModels
             }
         }
 
+        private void LoadDefaults()
+        {
+            var vsLoc = ConfigurationManager.AppSettings[VsLocKey];
+            var targetDir = ConfigurationManager.AppSettings[TargetDirectoryKey];
+
+            if (string.IsNullOrWhiteSpace(vsLoc))
+            {
+                vsLoc = DefaultVsLocation;
+            }
+            if (string.IsNullOrWhiteSpace(targetDir))
+            {
+                var myName = WindowsIdentity.GetCurrent().Name;
+                targetDir = "C:\\Users\\" + myName + "\\Documents";
+            }
+            VSLocation = vsLoc;
+            TargetDirectory = targetDir;
+        }
+
+        private void SetConfigSetting(string key, string value)
+        {
+            _configuration.AppSettings.Settings.Remove(key);
+            _configuration.AppSettings.Settings.Add(key, value);
+            _configuration.Save(ConfigurationSaveMode.Modified);
+            ConfigurationManager.RefreshSection("appSettings");
+        }
+
+        ~ProjectsViewModel()
+        {
+            SetConfigSetting(VsLocKey, VSLocation);
+            SetConfigSetting(TargetDirectoryKey, TargetDirectory);
+        }
+
         public void CancelBuild()
         {
             Reporter.Report("Canceling...");
             _cancelObject.ShouldCancel = true;
             _isCanceling = true;
-             NotifyOfPropertyChange(() => CanCancelBuild);
+            NotifyOfPropertyChange(() => CanCancelBuild);
         }
 
-        public void RebuildAll()
+        public async Task<bool> RebuildAll()
         {
-            StartBuild(true);
+            return await StartBuild(true);
         }
 
         private async Task<bool> StartBuild(bool rebuild)
@@ -169,8 +176,14 @@ namespace BuildAllVSProjects.ViewModels
 
         public async void StartBrowse()
         {
-            PopulateFromDir();
+            Mouse.OverrideCursor = Cursors.Wait;
+            _browseRunning = true;
+            NotifyOfPropertyChange(() => CanStartBrowse);
+            await PopulateFromDir();
+            _browseRunning = false;
+            Mouse.OverrideCursor = null;
             NotifyCanBuild();
+            
         }
 
         public async Task<bool> BuildAll()
@@ -178,10 +191,10 @@ namespace BuildAllVSProjects.ViewModels
             return await StartBuild(false);
         }
 
-        public void PopulateFromDir()
+        public async Task<bool> PopulateFromDir()
         {
             AllProjects.Clear();
-            var allSlnFiles = GetAllFilesByExentions(TargetDirectory);
+            var allSlnFiles = await GetAllFilesByExentions(TargetDirectory);
             foreach (var cur in allSlnFiles)
             {
                 if (!_solutionFileCache.ContainsKey(cur))
@@ -190,7 +203,8 @@ namespace BuildAllVSProjects.ViewModels
                 }
                 AllProjects.Add(_solutionFileCache[cur]);
             }
-            Reporter.Report(AllProjects.Count+" projects found in directory.");
+            Reporter.Report(AllProjects.Count + " projects found in directory.");
+            return true;
         }
 
         public void OpenProject(SolutionFile toOpen)
@@ -210,15 +224,22 @@ namespace BuildAllVSProjects.ViewModels
         }
 
 
-        private IEnumerable<string> GetAllFilesByExentions(string target)
+        private async Task<IEnumerable<string>> GetAllFilesByExentions(string target)
         {
             var ret = new List<string>();
-            GetAllExtensionFilesHelper(target, ret);
+            await Task.Factory.StartNew(() => { GetAllExtensionFilesHelper(target, ret); });
+
             return ret;
         }
 
+        const int MaxPathLength = 260;
         private void GetAllExtensionFilesHelper(string target, List<string> ret)
         {
+            if (target.Length > MaxPathLength)
+            {
+                //For some awful reason, Directory.Exists fails if the path is too long.
+                return;
+            }
             if (!Directory.Exists(target))
             {
                 Reporter.Report("Directory " + target + " does not exist.");
