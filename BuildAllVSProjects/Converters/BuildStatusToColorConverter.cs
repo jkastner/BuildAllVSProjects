@@ -22,7 +22,7 @@ namespace BuildAllVSProjects.Converters
                     case BuildSuccessStatus.FailedOnLatest:
                         return Brushes.Red;
                     case BuildSuccessStatus.SucceededOnLatest:
-                        return Brushes.Green;
+                        return Brushes.LawnGreen;
                     case BuildSuccessStatus.FailedOnPrevious:
                         return Brushes.IndianRed;
                     case BuildSuccessStatus.SucceededOnPrevious:

@@ -37,6 +37,8 @@ namespace BuildAllVSProjects.ViewModels
         private bool _isCanceling;
         private string _targetDirectory;
         private string _vsLocation;
+        private bool _selectedOnly;
+        private List<SolutionFile> _selectedItems = new List<SolutionFile>();
 
         [ImportingConstructor]
         public ProjectsViewModel(BuildService buildService, ReportViewModel reporter)
@@ -44,6 +46,7 @@ namespace BuildAllVSProjects.ViewModels
             _buildService = buildService;
             _configuration = ConfigurationManager.OpenExeConfiguration(Assembly.GetExecutingAssembly().Location);
             Reporter = reporter;
+            SelectedProjects = new ObservableCollection<SolutionFile>();
             AllProjects = new ObservableCollection<SolutionFile>();
             LoadDefaults();
         }
@@ -68,6 +71,17 @@ namespace BuildAllVSProjects.ViewModels
         public bool CanCancelBuild
         {
             get { return _buildRunning && !_isCanceling; }
+        }
+
+        public bool SelectedOnly
+        {
+            get { return _selectedOnly; }
+            set
+            {
+                if (value == _selectedOnly) return;
+                _selectedOnly = value;
+                NotifyOfPropertyChange(() => SelectedOnly);
+            }
         }
 
 
@@ -106,6 +120,8 @@ namespace BuildAllVSProjects.ViewModels
                 NotifyOfPropertyChange(() => ExtensionTypes);
             }
         }
+
+        public ObservableCollection<SolutionFile> SelectedProjects { get;  }
 
         private void LoadDefaults()
         {
@@ -159,10 +175,24 @@ namespace BuildAllVSProjects.ViewModels
             _buildRunning = true;
             NotifyCanBuild();
             _cancelObject = new CancelObject();
-            var qq = _buildService.Build(rebuild, VSLocation, AllProjects, _cancelObject);
-            await qq;
-            _buildRunning = false;
-            NotifyCanBuild();
+            IEnumerable<SolutionFile> targetProjects = AllProjects;
+            if (SelectedOnly)
+            {
+                targetProjects = _selectedItems;
+            }
+
+            try
+            {
+
+                var qq = _buildService.Build(rebuild, VSLocation, targetProjects, _cancelObject);
+                await qq;
+            }
+            finally
+            {
+                _buildRunning = false;
+                NotifyCanBuild();
+            }
+            
             return true;
         }
 
@@ -172,6 +202,7 @@ namespace BuildAllVSProjects.ViewModels
             NotifyOfPropertyChange(() => CanRebuildAll);
             NotifyOfPropertyChange(() => CanBuildAll);
             NotifyOfPropertyChange(() => CanCancelBuild);
+            
         }
 
         public async void StartBrowse()
@@ -266,5 +297,13 @@ namespace BuildAllVSProjects.ViewModels
                 }
             }
         }
+
+
+        public void SelectedItemsChanged(object selecteditems)
+        {
+            _selectedItems = (selecteditems as IEnumerable<object>)?.OfType<SolutionFile>().ToList();
+            
+        }
+
     }
 }
